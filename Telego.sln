@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34902.65
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Telego", "Telego.csproj", "{AB719D0C-DC8B-458D-AF63-A510D8944111}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AB719D0C-DC8B-458D-AF63-A510D8944111}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB719D0C-DC8B-458D-AF63-A510D8944111}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB719D0C-DC8B-458D-AF63-A510D8944111}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB719D0C-DC8B-458D-AF63-A510D8944111}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F9FC4F64-CB0C-40E5-BAB3-DE6AC5089549}
+	EndGlobalSection
+EndGlobal
