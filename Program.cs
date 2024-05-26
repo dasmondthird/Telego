@@ -26,8 +26,8 @@ class Program
 
         Console.CancelKeyPress += (sender, eventArgs) =>
         {
-            eventArgs.Cancel = true; // Prevent the process from terminating immediately
-            cts.Cancel();            // Signal cancellation to stop the bot
+            eventArgs.Cancel = true; 
+            cts.Cancel();            
         };
 
         await Task.Delay(Timeout.Infinite, cts.Token);
