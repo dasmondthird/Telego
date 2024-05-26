@@ -1,19 +1,24 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
+// Класс для управления сессиями пользователей
 public static class UserSessionManager
 {
+    // Словарь для хранения сессий по идентификаторам чата
     private static ConcurrentDictionary<long, UserSession> sessions = new ConcurrentDictionary<long, UserSession>();
 
+    // Асинхронный метод для обработки команд, получаемых от пользователя через бота
     public static async Task HandleCommand(ITelegramBotClient botClient, Message message)
     {
+        // Проверка на наличие сообщения и текста в нём
         if (message == null || message.Text == null) return;
 
         var chatId = message.Chat.Id;
+        // Пытаемся получить сессию; если её нет, создаём новую
         if (!sessions.TryGetValue(chatId, out var session))
         {
             session = new UserSession { ChatId = chatId, State = UserState.None };
@@ -22,6 +27,7 @@ public static class UserSessionManager
 
         var userInput = message.Text.Trim().ToLower();
 
+        // Обработка различных команд пользователя
         switch (userInput)
         {
             case "/start":
@@ -30,6 +36,7 @@ public static class UserSessionManager
                 await SendLanguageSelection(botClient, chatId);
                 break;
             default:
+                // Выбор языка для обучения
                 if (userInput.Contains("english") || userInput.Contains("1"))
                 {
                     session.Language = Language.English;
@@ -44,12 +51,27 @@ public static class UserSessionManager
                 }
                 else
                 {
+                    // Обработка команд, специфичных для состояния сессии
                     await HandleStateSpecificCommands(botClient, session, message);
                 }
                 break;
         }
     }
 
+    // Метод для отправки пользователю меню выбора языка
+    private static async Task SendLanguageSelection(ITelegramBotClient botClient, long chatId)
+    {
+        var keyboard = new ReplyKeyboardMarkup(new[]
+        {
+            new KeyboardButton[] { "1. English", "2. Spanish" },
+            new KeyboardButton[] { "🔄 Сброс" }
+        })
+        { ResizeKeyboard = true };
+
+        await botClient.SendTextMessageAsync(chatId, "Hello! I can teach you two languages: English and Spanish. Please choose which one you'd like to learn:", replyMarkup: keyboard);
+    }
+
+    // Асинхронный метод для обработки команд в зависимости от текущего состояния сессии
     private static async Task HandleStateSpecificCommands(ITelegramBotClient botClient, UserSession session, Message message)
     {
         var chatId = session.ChatId;
@@ -58,16 +80,20 @@ public static class UserSessionManager
         switch (session.State)
         {
             case UserState.AwaitingName:
+                // Обработка ввода имени пользователя
                 await HandleNameInput(botClient, session, chatId, userInput);
                 break;
             case UserState.Introduction:
             case UserState.ChooseCategory:
+                // Продолжение практики языка
                 await HandleLanguagePractice(botClient, session, chatId, userInput);
                 break;
             case UserState.AwaitingAnswer:
+                // Обработка ответа пользователя
                 await HandleAnswer(botClient, session, chatId, userInput);
                 break;
             default:
+                // Ответ на неизвестную команду
                 await botClient.SendTextMessageAsync(chatId, session.Language == Language.English
                     ? "Unknown command. Please try again. 🤷‍♂️"
                     : "Comando desconocido. Por favor, intenta de nuevo. 🤷‍♂️");
@@ -75,6 +101,7 @@ public static class UserSessionManager
         }
     }
 
+    // Обработка ввода имени пользователя и переход в следующее состояние
     private static async Task HandleNameInput(ITelegramBotClient botClient, UserSession session, long chatId, string userInput)
     {
         session.UserName = userInput;
@@ -84,6 +111,26 @@ public static class UserSessionManager
             : $"Bienvenido, {session.UserName}! Estoy emocionado de ayudarte a aprender español. ¿Podrías contarme un poco sobre ti?");
     }
 
+    // Метод для отправки меню категорий упражнений пользователю
+    private static async Task SendMenu(ITelegramBotClient botClient, long chatId, Language language)
+    {
+        string message = language == Language.English
+            ? "Choose an exercise to continue practicing English:"
+            : "Elige un ejercicio para continuar practicando español:";
+
+        var keyboard = new ReplyKeyboardMarkup(new[]
+        {
+            new KeyboardButton[] { "📚 Grammar", "📖 Vocabulary" },
+            new KeyboardButton[] { "💬 Idioms", "🗣 Phrasal Verbs" },
+            new KeyboardButton[] { "🗨 Conversation Practice", "👀 Reading", "✍ Writing" },
+            new KeyboardButton[] { "🔄 Сброс" }
+        })
+        { ResizeKeyboard = true };
+
+        await botClient.SendTextMessageAsync(chatId, message, replyMarkup: keyboard);
+    }
+
+    // Обработка дальнейшей практики языка в зависимости от текущего состояния пользователя
     private static async Task HandleLanguagePractice(ITelegramBotClient botClient, UserSession session, long chatId, string userInput)
     {
         if (userInput.Contains("introduce") || session.State == UserState.Introduction)
@@ -98,10 +145,12 @@ public static class UserSessionManager
         }
         else
         {
+            // Обработка выбора категории упражнений
             await HandleCategorySelection(botClient, session, chatId, userInput);
         }
     }
 
+    // Обработка выбора конкретной категории упражнений пользователем
     private static async Task HandleCategorySelection(ITelegramBotClient botClient, UserSession session, long chatId, string category)
     {
         switch (category)
@@ -116,6 +165,7 @@ public static class UserSessionManager
                 await HandleSelectedCategory(botClient, session, chatId, category);
                 break;
             default:
+                // Обработка неверного выбора категории
                 await botClient.SendTextMessageAsync(chatId, session.Language == Language.English
                     ? "I didn't understand that. Please choose a category by clicking a button below."
                     : "No entendí eso. Por favor, elige una categoría haciendo clic en un botón de abajo.");
@@ -124,6 +174,7 @@ public static class UserSessionManager
         }
     }
 
+    // Обработка заданий в выбранной категории
     private static async Task HandleSelectedCategory(ITelegramBotClient botClient, UserSession session, long chatId, string category)
     {
         string question = "";
@@ -165,6 +216,7 @@ public static class UserSessionManager
         await botClient.SendTextMessageAsync(chatId, question);
     }
 
+    // Обработка ответа пользователя на заданный вопрос
     private static async Task HandleAnswer(ITelegramBotClient botClient, UserSession session, long chatId, string userInput)
     {
         if (userInput.Equals(session.CurrentAnswer, StringComparison.OrdinalIgnoreCase))
@@ -184,38 +236,9 @@ public static class UserSessionManager
         session.State = UserState.ChooseCategory;
         await SendMenu(botClient, chatId, session.Language);
     }
-
-    private static async Task SendLanguageSelection(ITelegramBotClient botClient, long chatId)
-    {
-        var keyboard = new ReplyKeyboardMarkup(new[]
-        {
-            new KeyboardButton[] { "1. English", "2. Spanish" },
-            new KeyboardButton[] { "🔄 Сброс" }
-        })
-        { ResizeKeyboard = true };
-
-        await botClient.SendTextMessageAsync(chatId, "Hello! I can teach you two languages: English and Spanish. Please choose which one you'd like to learn:", replyMarkup: keyboard);
-    }
-
-    private static async Task SendMenu(ITelegramBotClient botClient, long chatId, Language language)
-    {
-        string message = language == Language.English
-            ? "Choose an exercise to continue practicing English:"
-            : "Elige un ejercicio para continuar practicando español:";
-
-        var keyboard = new ReplyKeyboardMarkup(new[]
-        {
-            new KeyboardButton[] { "📚 Grammar", "📖 Vocabulary" },
-            new KeyboardButton[] { "💬 Idioms", "🗣 Phrasal Verbs" },
-            new KeyboardButton[] { "🗨 Conversation Practice", "👀 Reading", "✍ Writing" },
-            new KeyboardButton[] { "🔄 Сброс" }
-        })
-        { ResizeKeyboard = true };
-
-        await botClient.SendTextMessageAsync(chatId, message, replyMarkup: keyboard);
-    }
 }
 
+// Класс, описывающий сессию пользователя
 public class UserSession
 {
     public long ChatId { get; set; }
@@ -226,6 +249,7 @@ public class UserSession
     public int Score { get; set; }
     public string UserName { get; set; } = "";
 
+    // Метод для сброса состояния сессии
     public void Reset()
     {
         State = UserState.None;
@@ -237,6 +261,7 @@ public class UserSession
     }
 }
 
+// Перечисления для состояний сессии и поддерживаемых языков
 public enum UserState
 {
     None,
